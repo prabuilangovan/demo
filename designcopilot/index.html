@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wafer Chuck Design Copilot</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap');
+:root{--bg:#050c18;--bg1:#081020;--bg2:#0c1628;--bg3:#101e32;--border:rgba(55,138,221,0.15);--border2:rgba(55,138,221,0.3);--blue:#378ADD;--blue2:#7BB8F0;--green:#63C48A;--red:#F08080;--amber:#F5C060;--teal:#5DCAA5;--purple:#AFA9EC;--txt:#E2EBF5;--txt2:#8A9BAE;--txt3:#4A5F70;--mono:'JetBrains Mono',monospace;--sans:'Syne',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh}
+.app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
+.header{grid-column:1/-1;background:var(--bg1);border-bottom:0.5px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
+.sidebar{background:var(--bg1);border-right:0.5px solid var(--border);padding:16px;overflow-y:auto;max-height:calc(100vh - 48px)}
+.main{overflow-y:auto;max-height:calc(100vh - 48px);display:flex;flex-direction:column;gap:0;padding:0}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-mark{width:28px;height:28px;border-radius:6px;background:var(--bg3);border:0.5px solid var(--border2);display:flex;align-items:center;justify-content:center}
+.logo-text{font-size:14px;font-weight:700;letter-spacing:-0.02em}
+.logo-text span{color:var(--blue)}
+.mode-badge{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:4px;background:rgba(55,138,221,0.1);color:var(--blue2);border:0.5px solid var(--border2);letter-spacing:0.05em}
+.header-right{display:flex;align-items:center;gap:8px}
+.iter-badge{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:20px}
+.ib-idle{background:rgba(255,255,255,0.04);color:var(--txt3);border:0.5px solid rgba(255,255,255,0.08)}
+.ib-run{background:rgba(55,138,221,0.15);color:var(--blue2);border:0.5px solid var(--border2);animation:pulse 1.5s infinite}
+.ib-done{background:rgba(99,196,138,0.15);color:var(--green);border:0.5px solid rgba(99,196,138,0.3)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+.section-label{font-family:var(--mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--txt3);margin-bottom:8px;padding-bottom:5px;border-bottom:0.5px solid var(--border)}
+.param-group{margin-bottom:14px}
+.param-row{margin-bottom:10px}
+.param-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.param-name{font-size:10px;color:var(--txt2);font-family:var(--mono)}
+.param-val{font-size:11px;font-weight:600;color:var(--txt);font-family:var(--mono);min-width:48px;text-align:right}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:3px;background:var(--bg3);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--blue);cursor:pointer;border:2px solid var(--bg1)}
+input[type=range]:disabled::-webkit-slider-thumb{background:var(--txt3);cursor:default}
+input[type=range]:disabled{opacity:0.4}
+.select-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.mat-btn{font-family:var(--mono);font-size:10px;padding:4px 9px;border-radius:5px;background:var(--bg3);border:0.5px solid var(--border);color:var(--txt2);cursor:pointer;transition:all 0.2s}
+.mat-btn:hover{border-color:var(--border2);color:var(--txt)}
+.mat-btn.active{background:rgba(55,138,221,0.15);border-color:var(--border2);color:var(--blue2)}
+.mat-btn:disabled{opacity:0.4;cursor:default}
+.target-list{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+.target-row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--bg3);border-radius:6px;border:0.5px solid var(--border)}
+.target-name{font-size:10px;color:var(--txt2);font-family:var(--mono)}
+.target-val{font-size:10px;font-weight:600;font-family:var(--mono)}
+.tv-pass{color:var(--green)}.tv-fail{color:var(--red)}.tv-pend{color:var(--txt3)}
+.btn-primary{width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);letter-spacing:0.02em;transition:background 0.2s}
+.btn-primary:hover{background:#2A75C5}
+.btn-primary:disabled{background:var(--bg3);color:var(--txt3);cursor:default}
+.btn-secondary{width:100%;padding:8px;background:transparent;color:var(--txt2);border:0.5px solid var(--border2);border-radius:8px;font-size:11px;cursor:pointer;font-family:var(--sans);transition:all 0.2s;margin-top:6px}
+.btn-secondary:hover{background:var(--bg3);color:var(--txt)}
+.welcome{display:flex;flex-direction:column;align-items:stretch;flex:1;padding:0;text-align:left}
+.welcome h1{font-size:24px;font-weight:800;letter-spacing:-0.03em;margin-bottom:8px;line-height:1.2}
+.welcome p{font-size:13px;color:var(--txt2);line-height:1.6;margin:0 0 18px}
+.config-preview{background:var(--bg2);border:0.5px solid var(--border);border-radius:10px;padding:14px 16px;text-align:left;max-width:480px;width:100%;margin-bottom:18px}
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.cfg-item{text-align:center}
+.cfg-val{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--blue2)}
+.cfg-lbl{font-size:9px;color:var(--txt3);margin-top:2px;font-family:var(--mono)}
+.welcome-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.wa-btn{padding:10px 22px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);border:none;transition:all 0.2s}
+.wa-primary{background:var(--blue);color:#fff}
+.wa-primary:hover{background:#2A75C5}
+.wa-secondary{background:var(--bg3);color:var(--txt2);border:0.5px solid var(--border2)}
+.wa-secondary:hover{color:var(--txt);background:var(--bg2)}
+/* compact panels */
+.panel{background:var(--bg1);border:0.5px solid var(--border);border-radius:10px;padding:10px 12px}
+.panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.panel-title{font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--txt2);font-family:var(--mono)}
+.panel-badge{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:4px}
+.pb-geo{background:rgba(175,169,236,0.15);color:var(--purple);border:0.5px solid rgba(175,169,236,0.3)}
+.pb-results{background:rgba(99,196,138,0.15);color:var(--green);border:0.5px solid rgba(99,196,138,0.3)}
+.pb-ai{background:rgba(55,138,221,0.15);color:var(--blue2);border:0.5px solid var(--border2)}
+.pb-chart{background:rgba(240,128,128,0.15);color:var(--red);border:0.5px solid rgba(240,128,128,0.3)}
+/* compact 2-col geo+results row */
+.geo-results-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* compact results grid — 2×2 */
+.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.res-card{background:var(--bg3);border-radius:7px;padding:7px 8px;border:0.5px solid var(--border);transition:border-color 0.3s}
+.res-card.pass{border-color:rgba(99,196,138,0.4)}
+.res-card.fail{border-color:rgba(240,128,128,0.4)}
+.res-row{display:flex;align-items:baseline;justify-content:space-between;gap:4px}
+.res-val{font-family:var(--mono);font-size:15px;font-weight:700;line-height:1}
+.res-lim{font-family:var(--mono);font-size:9px;color:var(--txt3)}
+.res-lbl{font-size:9px;color:var(--txt3);margin-top:2px;text-transform:uppercase;letter-spacing:0.04em;font-family:var(--mono)}
+.cost-row{display:flex;align-items:center;gap:8px}
+.cost-bar-wrap{flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.cost-bar-fill{height:100%;border-radius:2px;transition:width 0.5s}
+.pass{color:var(--green)}.fail{color:var(--red)}.warn{color:var(--amber)}
+.reasoning-box{background:var(--bg3);border-radius:8px;border:0.5px solid var(--border);padding:10px 12px;font-family:var(--mono);font-size:10px;line-height:1.65;color:var(--txt2);max-height:190px;overflow-y:auto;white-space:pre-wrap}
+.cursor{display:inline-block;width:5px;height:11px;background:var(--blue2);animation:blink 1s infinite;vertical-align:middle}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.accept-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px}
+.accept-title{font-size:11px;font-weight:700;color:var(--blue2);margin-bottom:8px;font-family:var(--mono);letter-spacing:0.03em}
+.proposed-params{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+.pp-item{background:var(--bg3);border-radius:6px;padding:7px 9px;border:0.5px solid var(--border)}
+.pp-name{font-size:9px;color:var(--txt3);font-family:var(--mono)}
+.pp-val{font-size:12px;font-weight:700;color:var(--amber);font-family:var(--mono);margin-top:2px}
+.pp-prev{font-size:9px;color:var(--txt3);font-family:var(--mono);margin-top:1px}
+.accept-actions{display:flex;gap:6px}
+.accept-btn{flex:1;padding:8px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);border:none;transition:all 0.2s}
+.ab-accept{background:var(--green);color:#0a200f}
+.ab-accept:hover{background:#4fa870}
+.ab-modify{background:var(--bg3);color:var(--txt2);border:0.5px solid var(--border2)}
+.ab-modify:hover{background:rgba(55,138,221,0.1);color:var(--blue2)}
+.chart-area{position:relative;height:160px}
+canvas{width:100%;height:100%}
+.iter-log{display:flex;flex-direction:column;gap:5px}
+.iter-row{display:flex;align-items:center;gap:7px;padding:6px 9px;background:var(--bg3);border-radius:7px;border:0.5px solid var(--border);font-family:var(--mono);font-size:9px}
+.ir-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.irn-fail{background:rgba(240,128,128,0.18);color:var(--red)}
+.irn-pass{background:rgba(99,196,138,0.18);color:var(--green)}
+.irn-run{background:rgba(55,138,221,0.18);color:var(--blue2)}
+.ir-data{flex:1;display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+.ird{text-align:center}
+.ird-v{font-weight:700}
+.ird-l{color:var(--txt3);font-size:8px}
+.ir-status{font-size:9px;padding:2px 5px;border-radius:3px}
+.iter-row-full{padding:9px 11px;background:var(--bg3);border-radius:8px;border:0.5px solid var(--border);margin-bottom:5px}
+.iter-row-full.fade-in{animation:fadeIn 0.4s ease}
+.ir-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.irm{background:var(--bg2);border-radius:5px;padding:5px 6px;text-align:center;border:0.5px solid var(--border)}
+.irm-lbl{font-size:8px;color:var(--txt3);text-transform:uppercase;letter-spacing:0.04em;font-family:var(--mono);margin-bottom:2px}
+.irm-val{font-size:11px;font-weight:700;font-family:var(--mono);line-height:1}
+.irm-lim{font-size:8px;color:var(--txt3);font-family:var(--mono);margin-top:1px}
+.irs-fail{background:rgba(240,128,128,0.15);color:var(--red)}
+.irs-pass{background:rgba(99,196,138,0.15);color:var(--green)}
+.pipeline{display:flex;align-items:center;gap:5px;padding:7px 12px;background:var(--bg3);border-radius:7px;border:0.5px solid var(--border)}
+.pipe-step{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px}
+.ps-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ps-idle{background:var(--bg2);border:0.5px solid var(--border)}
+.ps-run{background:var(--blue);animation:pulse 1s infinite}
+.ps-done{background:var(--green)}
+.ps-fail{background:var(--red)}
+.pipe-arr{color:var(--txt3);font-size:9px}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
+@keyframes scanline{0%{transform:translateY(0)}100%{transform:translateY(280px)}}
+#scan-line{animation:scanline 4s linear infinite}
+@media(max-width:800px){.app{grid-template-columns:1fr}.sidebar{max-height:none;border-right:none;border-bottom:0.5px solid var(--border)}.main{max-height:none}.geo-results-row{grid-template-columns:1fr}}
+.hidden{display:none!important}
+.fade-in{animation:fadeIn 0.4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.api-key-notice{background:rgba(245,192,96,0.08);border:0.5px solid rgba(245,192,96,0.3);border-radius:7px;padding:8px 10px;font-size:10px;color:var(--amber);font-family:var(--mono);margin-bottom:8px;line-height:1.5}
+.api-key-input{width:100%;background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:7px 9px;color:var(--txt);font-family:var(--mono);font-size:10px;outline:none;margin-bottom:8px}
+.api-key-input:focus{border-color:var(--blue)}
+/* converged screen */
+.conv-screen{display:flex;flex-direction:column;align-items:center;text-align:center;padding:32px 20px;gap:16px}
+.conv-icon{width:64px;height:64px;border-radius:50%;background:rgba(99,196,138,0.12);border:0.5px solid rgba(99,196,138,0.4);display:flex;align-items:center;justify-content:center;margin:0 auto}
+.conv-title{font-size:22px;font-weight:800;color:var(--green);letter-spacing:-0.02em}
+.conv-sub{font-size:13px;color:var(--txt2);line-height:1.6;max-width:440px}
+.conv-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:440px;width:100%}
+.conv-stat{background:var(--bg2);border-radius:8px;padding:10px 8px;text-align:center;border:0.5px solid var(--border)}
+.conv-stat-val{font-family:var(--mono);font-size:16px;font-weight:700}
+.conv-stat-lbl{font-size:9px;color:var(--txt3);margin-top:2px;text-transform:uppercase;letter-spacing:0.04em;font-family:var(--mono)}
+.demo-notice{background:rgba(55,138,221,0.07);border:0.5px solid var(--border2);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--txt2);line-height:1.6;max-width:440px;text-align:left}
+.demo-notice strong{color:var(--blue2);font-weight:600}
+.conv-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.conv-btn-primary{padding:11px 28px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);background:var(--blue);color:#fff;border:none;transition:all 0.2s}
+.conv-btn-primary:hover{background:#2A75C5}
+.conv-btn-secondary{padding:11px 22px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);background:var(--bg3);color:var(--txt2);border:0.5px solid var(--border2);transition:all 0.2s}
+.conv-btn-secondary:hover{color:var(--txt);background:var(--bg2)}
+/* demo limit banner */
+.demo-limit-banner{background:rgba(245,192,96,0.08);border:0.5px solid rgba(245,192,96,0.35);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--amber);font-family:var(--mono);line-height:1.5;text-align:center}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 18 18" fill="none" width="16" height="16">
+        <circle cx="9" cy="9" r="7.5" stroke="#378ADD" stroke-width="0.8"/>
+        <circle cx="9" cy="9" r="4.5" stroke="#378ADD" stroke-width="0.5" stroke-dasharray="2,1.5"/>
+        <circle cx="9" cy="9" r="1.8" fill="#378ADD" opacity="0.6"/>
+        <line x1="2" y1="9" x2="16" y2="9" stroke="#378ADD" stroke-width="0.5" opacity="0.4"/>
+        <line x1="9" y1="2" x2="9" y2="16" stroke="#378ADD" stroke-width="0.5" opacity="0.4"/>
+      </svg>
+    </div>
+    <div class="logo-text"><span>Engineering Design</span> Co-Pilot</div>
+  </div>
+  <div class="header-right">
+    <div class="mode-badge">ANALYTICAL MODE</div>
+    <div class="iter-badge ib-idle" id="iter-badge">IDLE</div>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="param-group">
+    <div class="section-label">Geometry</div>
+    <div class="param-row">
+      <div class="param-label"><span class="param-name">wall thickness</span><span class="param-val" id="v-wall">14.0 mm</span></div>
+      <input type="range" id="s-wall" min="10" max="20" step="0.5" value="14">
+    </div>
+    <div class="param-row">
+      <div class="param-label"><span class="param-name">top plate</span><span class="param-val" id="v-top">3.0 mm</span></div>
+      <input type="range" id="s-top" min="2" max="10" step="0.5" value="3">
+    </div>
+    <div class="param-row">
+      <div class="param-label"><span class="param-name">channel depth</span><span class="param-val" id="v-cd">5.0 mm</span></div>
+      <input type="range" id="s-cd" min="2" max="9" step="0.5" value="5">
+    </div>
+    <div class="param-row">
+      <div class="param-label"><span class="param-name">num channels</span><span class="param-val" id="v-nc">4</span></div>
+      <input type="range" id="s-nc" min="4" max="12" step="2" value="4">
+    </div>
+  </div>
+
+  <div class="param-group">
+    <div class="section-label">Material</div>
+    <div class="select-row" id="mat-sel">
+      <button class="mat-btn active" data-mat="AL6061">AL6061</button>
+      <button class="mat-btn" data-mat="AL7075">AL7075</button>
+      <button class="mat-btn" data-mat="Invar">Invar</button>
+      <button class="mat-btn" data-mat="SiC">SiC</button>
+    </div>
+  </div>
+
+  <div class="param-group">
+    <div class="section-label">Physics / Cooling</div>
+    <div class="param-row">
+      <div class="param-label"><span class="param-name">coolant HTC</span><span class="param-val" id="v-htc">3e-5</span></div>
+      <input type="range" id="s-htc" min="0" max="6" step="1" value="0">
+    </div>
+    <div class="param-row">
+      <div class="param-label"><span class="param-name">heater temp</span><span class="param-val" id="v-ht">130°C</span></div>
+      <input type="range" id="s-ht" min="80" max="150" step="5" value="130" disabled>
+    </div>
+  </div>
+
+  <div class="param-group">
+    <div class="section-label">Targets</div>
+    <div class="target-list">
+      <div class="target-row"><span class="target-name">stress</span><span class="target-val tv-pend" id="t-stress">— / 180 MPa</span></div>
+      <div class="target-row"><span class="target-name">bow</span><span class="target-val tv-pend" id="t-bow">— / 3.0 µm</span></div>
+      <div class="target-row"><span class="target-name">temp</span><span class="target-val tv-pend" id="t-temp">— / 120°C</span></div>
+      <div class="target-row"><span class="target-name">mass</span><span class="target-val tv-pend" id="t-mass">— / 3500g</span></div>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="run-btn" onclick="startRun()">Run Copilot</button>
+  <button class="btn-secondary" onclick="resetAll()">Reset to defaults</button>
+
+  <div style="margin-top:16px;padding-top:14px;border-top:0.5px solid var(--border)">
+    <div class="section-label" style="margin-bottom:6px">AI API Key <span style="color:var(--txt3);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+    <div class="api-key-notice" id="api-notice" style="margin-bottom:8px">Paste any API key to enable live AI reasoning. Without it the demo runs with built-in analytical reasoning.</div>
+    <input class="api-key-input" id="api-key" placeholder="Paste API key..." type="password">
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- WELCOME -->
+  <div id="welcome-screen" class="welcome fade-in" style="padding:0;align-items:stretch;text-align:left;gap:0">
+
+    <!-- ══ HERO SECTION ══ -->
+    <div style="position:relative;overflow:hidden;padding:36px 28px 28px;background:radial-gradient(ellipse at 60% 0%,rgba(55,138,221,0.12) 0%,transparent 65%),radial-gradient(ellipse at 10% 80%,rgba(99,196,138,0.07) 0%,transparent 50%);border-bottom:0.5px solid var(--border)">
+
+      <!-- Animated background grid -->
+      <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0.18" viewBox="0 0 600 300" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+            <path d="M30 0L0 0 0 30" fill="none" stroke="#378ADD" stroke-width="0.4"/>
+          </pattern>
+        </defs>
+        <rect width="600" height="300" fill="url(#grid)"/>
+        <!-- Animated scan line -->
+        <line id="scan-line" x1="0" y1="60" x2="600" y2="60" stroke="#378ADD" stroke-width="0.8" opacity="0.6"/>
+      </svg>
+
+      <!-- Eyebrow -->
+      <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(55,138,221,0.1);border:0.5px solid rgba(55,138,221,0.3);border-radius:20px;padding:4px 12px;margin-bottom:18px;position:relative">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--blue);display:inline-block;animation:pulse 1.8s infinite"></span>
+        <span style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--blue2)">AI-in-the-loop engineering · live demo</span>
+      </div>
+
+      <!-- Main headline -->
+      <h1 style="font-size:clamp(22px,4vw,34px);font-weight:800;letter-spacing:-0.03em;line-height:1.15;margin-bottom:14px;position:relative;max-width:580px">
+        Design with Copilot: Make
+        <span style="color:var(--blue2)">Geometry, Physics and Material</span>
+        decisions for fastest path to
+        <span style="color:var(--green)">passing design</span>
+        and then optimize it
+      </h1>
+
+      <!-- Disclaimer -->
+      <div style="max-width:600px;margin-bottom:18px;position:relative">
+        <div style="border:0.5px solid rgba(245,192,96,0.28);border-radius:8px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:7px;padding:6px 12px;background:rgba(245,192,96,0.07);border-bottom:0.5px solid rgba(245,192,96,0.2)">
+            <span style="font-size:11px">⚠️</span>
+            <span style="font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber)">Disclaimer</span>
+          </div>
+          <div style="padding:8px 10px;display:grid;grid-template-columns:1fr 1fr;gap:5px">
+            <div style="font-size:9px;color:var(--txt3);line-height:1.6;padding:5px 7px;background:rgba(245,192,96,0.04);border-radius:5px"><strong style="color:var(--txt2)">🔧 Personal project</strong> — built on personal hardware, own time, using free open-source software. Not affiliated with any employer, client, or institution, past or present.</div>
+            <div style="font-size:9px;color:var(--txt3);line-height:1.6;padding:5px 7px;background:rgba(55,138,221,0.04);border-radius:5px"><strong style="color:var(--txt2)">🤖 AI-generated use case</strong> — the wafer chuck scenario (physics, materials, thermal loads, targets) was proposed by an AI when prompted for a semiconductor machinery use case. It does not reflect the author's professional domain or any past/current employer knowledge.</div>
+            <div style="font-size:9px;color:var(--txt3);line-height:1.6;padding:5px 7px;background:rgba(99,196,138,0.03);border-radius:5px"><strong style="color:var(--txt2)">📐 Synthetic data</strong> — all geometry, FEA results, and cost models are illustrative approximations for demonstration. No real product or proprietary design is represented.</div>
+            <div style="font-size:9px;color:var(--txt3);line-height:1.6;padding:5px 7px;background:rgba(175,169,236,0.04);border-radius:5px"><strong style="color:var(--txt2)">🎯 Intent</strong> — explore AI-augmented engineering workflows and share findings openly with the community. Feedback welcome.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub -->
+      <div style="font-size:12px;color:var(--txt2);line-height:1.8;max-width:600px;margin-bottom:22px;position:relative;display:grid;grid-template-columns:1fr 1fr;gap:10px 20px">
+
+        <!-- What is a wafer chuck -->
+        <div style="grid-column:1/-1;padding:10px 14px;background:rgba(55,138,221,0.06);border:0.5px solid rgba(55,138,221,0.2);border-radius:8px;margin-bottom:2px">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--blue2);margin-bottom:5px">What is a wafer chuck?</div>
+          <div style="font-size:11px;color:var(--txt2);line-height:1.7">A wafer chuck is the precision fixture that holds a silicon wafer flat against a heated platen during semiconductor lithography, deposition, or inspection. It must be <strong style="color:var(--txt)">dimensionally perfect</strong> — any bow in the wafer surface causes pattern misalignment at nanometre scale, ruining the die.</div>
+        </div>
+
+        <!-- Physics column 1 -->
+        <div>
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:5px">The physics at play</div>
+          <div style="font-size:11px;color:var(--txt2);line-height:1.7">The chuck sits on a resistive heater at 80–150 °C while the fab room stays near 20 °C. That 100 °C+ gradient drives <strong style="color:var(--txt)">differential thermal expansion</strong> — the body tries to grow, the cooled top plate resists, and the whole assembly bows. The stiffer and thicker the top plate, and the lower the material's CTE, the less it bows. Cooling channels carved through the body extract heat, but they also remove material — reducing mass and stiffness simultaneously, so every change has a second-order effect somewhere else.</div>
+        </div>
+
+        <!-- Design trade-offs column 2 -->
+        <div>
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:5px">Design trade-offs that matter</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:10px;color:var(--txt3);padding:4px 7px;background:rgba(245,192,96,0.06);border-radius:5px"><strong style="color:var(--txt2)">Material CTE</strong> — Al6061 expands 23× more per °C than Invar. Switching material alone cuts bow by up to 20×, but Invar costs 4× more and is harder to machine.</div>
+            <div style="font-size:10px;color:var(--txt3);padding:4px 7px;background:rgba(93,202,165,0.05);border-radius:5px"><strong style="color:var(--txt2)">Top-plate thickness</strong> — thicker plate increases bending stiffness but adds mass and raises the centre of gravity.</div>
+            <div style="font-size:10px;color:var(--txt3);padding:4px 7px;background:rgba(55,138,221,0.05);border-radius:5px"><strong style="color:var(--txt2)">Cooling channels</strong> — more / deeper channels lower chuck temperature (reducing ΔT and bow), but thin walls risk stress failure under vacuum clamping loads.</div>
+            <div style="font-size:10px;color:var(--txt3);padding:4px 7px;background:rgba(175,169,236,0.05);border-radius:5px"><strong style="color:var(--txt2)">Mass budget</strong> — light chuck = faster stage settling. Heavy Invar body costs throughput. Every gram matters at high-velocity scanning.</div>
+          </div>
+        </div>
+
+        <!-- How copilot helps — full width -->
+        <div style="grid-column:1/-1;padding:10px 14px;background:rgba(99,196,138,0.05);border:0.5px solid rgba(99,196,138,0.2);border-radius:8px;margin-top:2px">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--green);margin-bottom:5px">How this co-pilot reaches a passing design faster</div>
+          <div style="font-size:11px;color:var(--txt2);line-height:1.7">Rather than sweeping parameters blindly, the co-pilot <strong style="color:var(--txt)">reads the FEA output, identifies the dominant failure mode</strong> (bow, stress, temp, or mass), and makes a <em>causal</em> move — switching material when CTE is the root cause, or stiffening geometry when it isn't. It runs a two-phase strategy: get every metric inside its limit first, then trim cost without re-breaking anything. When you push back with your own idea, it runs yours, explains the result, and only overrides when the evidence is clear.</div>
+        </div>
+
+      </div>
+
+      <!-- Proof stats row -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:560px;margin-bottom:24px;position:relative">
+        <div style="background:rgba(240,128,128,0.08);border:0.5px solid rgba(240,128,128,0.25);border-radius:8px;padding:10px 8px;text-align:center">
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--red);line-height:1">29.9<span style="font-size:10px">µm</span></div>
+          <div style="font-family:var(--mono);font-size:8px;color:var(--txt3);margin-top:3px;letter-spacing:0.05em">BOW · START</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--txt3)">→</div>
+        <div style="background:rgba(99,196,138,0.08);border:0.5px solid rgba(99,196,138,0.25);border-radius:8px;padding:10px 8px;text-align:center">
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green);line-height:1">2.0<span style="font-size:10px">µm</span></div>
+          <div style="font-family:var(--mono);font-size:8px;color:var(--txt3);margin-top:3px;letter-spacing:0.05em">BOW · FINAL</div>
+        </div>
+        <div style="background:rgba(55,138,221,0.08);border:0.5px solid rgba(55,138,221,0.25);border-radius:8px;padding:10px 8px;text-align:center">
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--blue2);line-height:1">150<span style="font-size:10px">s</span></div>
+          <div style="font-family:var(--mono);font-size:8px;color:var(--txt3);margin-top:3px;letter-spacing:0.05em">5 ITERS</div>
+        </div>
+      </div>
+
+      <!-- CTA row -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;position:relative">
+        <button class="wa-btn wa-primary" onclick="startRun()" style="padding:11px 28px;font-size:13px;border-radius:9px;letter-spacing:0.01em;display:flex;align-items:center;gap:8px">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="3,1 13,7 3,13" fill="white"/></svg>
+          Launch co-pilot
+        </button>
+        <button class="wa-btn wa-secondary" onclick="hideWelcome()" style="padding:11px 20px;font-size:12px;border-radius:9px">
+          ⚙ Tune parameters first
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ ANIMATED CROSS-SECTION + LOOP ══ -->
+    <div style="padding:20px 28px;border-bottom:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+
+      <!-- Cross-section animation -->
+      <div>
+        <svg viewBox="0 0 240 170" width="100%" style="border-radius:8px;border:0.5px solid var(--border)">
+          <rect width="240" height="170" fill="#0c1628"/>
+          <!-- ITER 1 — left header -->
+          <text x="58" y="13" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#F08080" opacity="0.8">ITER 1 — FAIL</text>
+          <!-- bow metric -->
+          <text x="58" y="23" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6" fill="#F08080">bow 29.9µm ✕</text>
+          <!-- Bow curve animated -->
+          <path d="M10 36 Q58 25 106 36" fill="none" stroke="#F08080" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.9">
+            <animate attributeName="d" values="M10 36 Q58 25 106 36;M10 36 Q58 22 106 36;M10 36 Q58 25 106 36" dur="3s" repeatCount="indefinite"/>
+          </path>
+          <!-- Chuck body iter1 -->
+          <rect x="10" y="36" width="96" height="60" rx="3" fill="rgba(240,128,128,0.08)" stroke="rgba(240,128,128,0.35)" stroke-width="0.5"/>
+          <!-- Top plate iter1 (thin 3mm) -->
+          <rect x="10" y="36" width="96" height="10" rx="2" fill="rgba(240,128,128,0.18)" stroke="rgba(240,128,128,0.4)" stroke-width="0.5"/>
+          <text x="58" y="43" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6" fill="rgba(240,128,128,0.7)">3mm plate</text>
+          <!-- Channels iter1 (4) -->
+          <rect x="16" y="49" width="16" height="8" rx="1" fill="rgba(93,202,165,0.1)" stroke="rgba(93,202,165,0.3)" stroke-width="0.4"/>
+          <rect x="36" y="49" width="16" height="8" rx="1" fill="rgba(93,202,165,0.1)" stroke="rgba(93,202,165,0.3)" stroke-width="0.4"/>
+          <rect x="56" y="49" width="16" height="8" rx="1" fill="rgba(93,202,165,0.1)" stroke="rgba(93,202,165,0.3)" stroke-width="0.4"/>
+          <rect x="76" y="49" width="16" height="8" rx="1" fill="rgba(93,202,165,0.1)" stroke="rgba(93,202,165,0.3)" stroke-width="0.4"/>
+          <!-- AL6061 label -->
+          <text x="58" y="90" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="rgba(240,128,128,0.6)">AL6061</text>
+          <!-- Heater -->
+          <rect x="10" y="97" width="96" height="4" rx="1" fill="rgba(245,192,96,0.15)" stroke="rgba(245,192,96,0.4)" stroke-width="0.4"/>
+          <text x="58" y="110" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6" fill="rgba(245,192,96,0.55)">130°C heater</text>
+
+          <!-- Divider -->
+          <line x1="120" y1="6" x2="120" y2="160" stroke="rgba(255,255,255,0.08)" stroke-width="0.5" stroke-dasharray="3,2"/>
+          <text x="120" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(255,255,255,0.15)">→</text>
+
+          <!-- ITER 5 — right header -->
+          <text x="182" y="13" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#63C48A" opacity="0.8">ITER 5 — CONVERGED</text>
+          <!-- bow metric -->
+          <text x="182" y="23" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6" fill="#63C48A">bow 2.0µm ✓</text>
+          <!-- Flat top line (good bow) -->
+          <line x1="134" y1="36" x2="230" y2="36" stroke="#63C48A" stroke-width="1.2" opacity="0.8"/>
+          <!-- Chuck body iter5 -->
+          <rect x="134" y="36" width="96" height="75" rx="3" fill="rgba(99,196,138,0.06)" stroke="rgba(99,196,138,0.3)" stroke-width="0.5"/>
+          <!-- Top plate iter5 (thick 8mm) -->
+          <rect x="134" y="36" width="96" height="24" rx="2" fill="rgba(99,196,138,0.14)" stroke="rgba(99,196,138,0.35)" stroke-width="0.5"/>
+          <text x="182" y="49" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6" fill="rgba(99,196,138,0.75)">8mm plate</text>
+          <!-- Channels iter5 (8) -->
+          <rect x="138" y="63" width="8" height="6" rx="1" fill="rgba(93,202,165,0.15)" stroke="rgba(93,202,165,0.35)" stroke-width="0.4"/>
+          <rect x="149" y="63" width="8" height="6" rx="1" fill="rgba(93,202,165,0.15)" stroke="rgba(93,202,165,0.35)" stroke-width="0.4"/>
+          <rect x="160" y="63" width="8" height="6" rx="1" fill="rgba(93,202,165,0.15)" stroke="rgba(93,202,165,0.35)" stroke-width="0.4"/>
+          <rect x="171" y="63" width="8" height="6" rx="1" fill="rgba(93,202,165,0.15)" stroke="rgba(93,202,165,0.35)" stroke-width="0.4"/>
+          <rect x="182" y="63" width="8" height="6" rx="1" fill="rgba(93,202,165,0.15)" stroke="rgba(93,202,165,0.35)" stroke-width="0.4"/>
+          <rect x="193" y="63" width="8" height="6" rx="1" fill="rgba(93,202,165,0.15)" stroke="rgba(93,202,165,0.35)" stroke-width="0.4"/>
+          <rect x="204" y="63" width="8" height="6" rx="1" fill="rgba(93,202,165,0.15)" stroke="rgba(93,202,165,0.35)" stroke-width="0.4"/>
+          <rect x="215" y="63" width="8" height="6" rx="1" fill="rgba(93,202,165,0.15)" stroke="rgba(93,202,165,0.35)" stroke-width="0.4"/>
+          <!-- Invar label -->
+          <text x="182" y="97" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="rgba(99,196,138,0.7)">Invar · CTE 1.2µm/m°C</text>
+          <!-- Heater -->
+          <rect x="134" y="112" width="96" height="4" rx="1" fill="rgba(245,192,96,0.15)" stroke="rgba(245,192,96,0.35)" stroke-width="0.4"/>
+        </svg>
+        <!-- Label below the visualization -->
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--txt3);margin-top:8px;text-align:center">Cross-section · iter 1 vs converged</div>
+      </div>
+
+      <!-- Loop diagram -->
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--txt3);margin-bottom:10px">The reasoning loop</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <!-- Step blocks -->
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(175,169,236,0.07);border:0.5px solid rgba(175,169,236,0.2);border-radius:7px">
+            <div style="width:28px;height:28px;border-radius:6px;background:rgba(175,169,236,0.15);border:0.5px solid rgba(175,169,236,0.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono);font-size:9px;font-weight:700;color:#AFA9EC">YOU</div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:#AFA9EC;font-family:var(--mono)">Set parameters</div>
+              <div style="font-size:9px;color:var(--txt3);line-height:1.4">Geometry · material · cooling</div>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:11px;color:var(--txt3)">↓</div>
+
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(55,138,221,0.07);border:0.5px solid rgba(55,138,221,0.2);border-radius:7px">
+            <div style="width:28px;height:28px;border-radius:6px;background:rgba(55,138,221,0.15);border:0.5px solid rgba(55,138,221,0.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono);font-size:8px;font-weight:700;color:var(--blue2)">FEA</div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--blue2);font-family:var(--mono)">Simulate physics</div>
+              <div style="font-size:9px;color:var(--txt3);line-height:1.4">Stress · bow · temp · mass</div>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:11px;color:var(--txt3)">↓</div>
+
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(240,128,128,0.06);border:0.5px solid rgba(240,128,128,0.2);border-radius:7px">
+            <div style="width:28px;height:28px;border-radius:6px;background:rgba(240,128,128,0.12);border:0.5px solid rgba(240,128,128,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono);font-size:8px;font-weight:700;color:var(--red)">AI</div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--red);font-family:var(--mono)">Diagnose & propose</div>
+              <div style="font-size:9px;color:var(--txt3);line-height:1.4">Root cause → written rationale → next params</div>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:11px;color:var(--txt3)">↓</div>
+
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(99,196,138,0.06);border:0.5px solid rgba(99,196,138,0.2);border-radius:7px">
+            <div style="width:28px;height:28px;border-radius:6px;background:rgba(99,196,138,0.12);border:0.5px solid rgba(99,196,138,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono);font-size:8px;font-weight:700;color:var(--green)">YOU</div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--green);font-family:var(--mono)">Accept or override</div>
+              <div style="font-size:9px;color:var(--txt3);line-height:1.4">You stay in control — always</div>
+            </div>
+          </div>
+          <div style="text-align:center;font-family:var(--mono);font-size:8px;color:var(--txt3);letter-spacing:0.08em;padding-top:2px">↻ repeat until converged</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TWO-PHASE STRATEGY ══ -->
+    <div style="padding:20px 28px;border-bottom:0.5px solid var(--border)">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--txt3);margin-bottom:14px">Two-phase optimisation — why this never thrashes</div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center">
+
+        <!-- Phase 1 -->
+        <div style="padding:14px 16px;background:rgba(240,128,128,0.06);border:0.5px solid rgba(240,128,128,0.25);border-radius:9px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="width:32px;height:32px;border-radius:7px;background:rgba(240,128,128,0.15);border:0.5px solid rgba(240,128,128,0.4);display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="font-size:7px;font-weight:700;color:var(--red);font-family:var(--mono)">PH</div>
+              <div style="font-size:13px;font-weight:800;color:var(--red);font-family:var(--mono);line-height:1">1</div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:var(--red);font-family:var(--mono)">Feasibility</div>
+          </div>
+          <div style="font-size:10px;color:var(--txt2);line-height:1.65;margin-bottom:8px">Any target failing? AI <strong style="color:var(--txt)">ignores cost entirely</strong>. Gets the design inside bounds first. No exceptions.</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <div style="font-size:9px;color:var(--txt3);font-family:var(--mono);padding:3px 6px;background:rgba(240,128,128,0.07);border-radius:4px">→ bow fail + high CTE → switch material</div>
+            <div style="font-size:9px;color:var(--txt3);font-family:var(--mono);padding:3px 6px;background:rgba(240,128,128,0.07);border-radius:4px">→ stress fail → wall + cooling</div>
+            <div style="font-size:9px;color:var(--txt3);font-family:var(--mono);padding:3px 6px;background:rgba(240,128,128,0.07);border-radius:4px">→ temp fail → max HTC + channels</div>
+          </div>
+        </div>
+
+        <!-- Arrow -->
+        <div style="text-align:center">
+          <div style="font-family:var(--mono);font-size:8px;color:var(--txt3);letter-spacing:0.06em;margin-bottom:4px">ALL</div>
+          <div style="font-size:16px;color:var(--teal)">⇒</div>
+          <div style="font-family:var(--mono);font-size:8px;color:var(--txt3);letter-spacing:0.06em;margin-top:4px">GREEN</div>
+        </div>
+
+        <!-- Phase 2 -->
+        <div style="padding:14px 16px;background:rgba(99,196,138,0.05);border:0.5px solid rgba(99,196,138,0.25);border-radius:9px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="width:32px;height:32px;border-radius:7px;background:rgba(99,196,138,0.12);border:0.5px solid rgba(99,196,138,0.4);display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="font-size:7px;font-weight:700;color:var(--green);font-family:var(--mono)">PH</div>
+              <div style="font-size:13px;font-weight:800;color:var(--green);font-family:var(--mono);line-height:1">2</div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:var(--green);font-family:var(--mono)">Optimisation</div>
+          </div>
+          <div style="font-size:10px;color:var(--txt2);line-height:1.65;margin-bottom:8px">Feasibility locked. Now AI hunts cost — <strong style="color:var(--txt)">exploiting every margin</strong> without ever re-breaking the physics.</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <div style="font-size:9px;color:var(--txt3);font-family:var(--mono);padding:3px 6px;background:rgba(99,196,138,0.06);border-radius:4px">→ trim wall → cut mass score</div>
+            <div style="font-size:9px;color:var(--txt3);font-family:var(--mono);padding:3px 6px;background:rgba(99,196,138,0.06);border-radius:4px">→ reduce HTC → lower cooling cost</div>
+            <div style="font-size:9px;color:var(--txt3);font-family:var(--mono);padding:3px 6px;background:rgba(99,196,138,0.06);border-radius:4px">→ Δcost &lt;1% → declare converged</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STACK + HOW IT WORKS ══ -->
+    <div style="padding:20px 28px;border-bottom:0.5px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--txt3);margin-bottom:12px">The real system</div>
+        <p style="font-size:11px;color:var(--txt2);line-height:1.75;margin-bottom:12px">Full FEA on a personal laptop. No cloud. No licences. Converges in ~150 seconds.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          <span style="font-family:var(--mono);font-size:9px;padding:4px 9px;border-radius:5px;background:rgba(175,169,236,0.1);border:0.5px solid rgba(175,169,236,0.25);color:var(--purple)">FreeCAD 1.0</span>
+          <span style="font-family:var(--mono);font-size:9px;padding:4px 9px;border-radius:5px;background:rgba(55,138,221,0.1);border:0.5px solid rgba(55,138,221,0.25);color:var(--blue2)">Gmsh</span>
+          <span style="font-family:var(--mono);font-size:9px;padding:4px 9px;border-radius:5px;background:rgba(99,196,138,0.1);border:0.5px solid rgba(99,196,138,0.25);color:var(--green)">CalculiX 2.23</span>
+          <span style="font-family:var(--mono);font-size:9px;padding:4px 9px;border-radius:5px;background:rgba(245,192,96,0.1);border:0.5px solid rgba(245,192,96,0.25);color:var(--amber)">Python 3</span>
+          <span style="font-family:var(--mono);font-size:9px;padding:4px 9px;border-radius:5px;background:rgba(240,128,128,0.1);border:0.5px solid rgba(240,128,128,0.25);color:var(--red)">Anthropic API</span>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--txt3);margin-bottom:12px">This demo · three modes</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="padding:8px 10px;background:rgba(99,196,138,0.06);border:0.5px solid rgba(99,196,138,0.2);border-radius:7px">
+            <div style="font-size:10px;font-weight:700;color:var(--green);font-family:var(--mono);margin-bottom:2px">▶ Default run</div>
+            <div style="font-size:10px;color:var(--txt3);line-height:1.5">Analytical physics calibrated from real FEA. Same convergence behaviour in the browser, instant.</div>
+          </div>
+          <div style="padding:8px 10px;background:rgba(55,138,221,0.06);border:0.5px solid rgba(55,138,221,0.2);border-radius:7px">
+            <div style="font-size:10px;font-weight:700;color:var(--blue2);font-family:var(--mono);margin-bottom:2px">⚡ With API key</div>
+            <div style="font-size:10px;color:var(--txt3);line-height:1.5">Live LLM gets actual physics numbers. Writes real engineering diagnosis. Every run is unique.</div>
+          </div>
+          <div style="padding:8px 10px;background:rgba(245,192,96,0.06);border:0.5px solid rgba(245,192,96,0.2);border-radius:7px">
+            <div style="font-size:10px;font-weight:700;color:var(--amber);font-family:var(--mono);margin-bottom:2px">⚙ Custom parameters</div>
+            <div style="font-size:10px;color:var(--txt3);line-height:1.5">Adjust any slider. The engine responds to your specific starting point and converges from there.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ WHAT MAKES THIS DIFFERENT ══ -->
+    <div style="padding:20px 28px;border-bottom:0.5px solid var(--border)">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--txt3);margin-bottom:14px">Not a parameter sweep. A physics-aware reasoner.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+
+        <div style="padding:12px 14px;background:rgba(240,128,128,0.05);border:0.5px solid rgba(240,128,128,0.18);border-radius:8px">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.1em;color:var(--red);text-transform:uppercase;margin-bottom:5px">Scripted sweep</div>
+          <div style="font-size:11px;color:var(--txt3);line-height:1.6">Vary param ±Δ → re-solve → accept if better.<br>No causal understanding.</div>
+        </div>
+
+        <div style="padding:12px 14px;background:rgba(99,196,138,0.05);border:0.5px solid rgba(99,196,138,0.2);border-radius:8px">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.1em;color:var(--green);text-transform:uppercase;margin-bottom:5px">This co-pilot</div>
+          <div style="font-size:11px;color:var(--txt2);line-height:1.6">Reads FEA output → diagnoses failure mode → escalates material / cooling → <strong style="color:var(--txt)">understands bow physics</strong>.</div>
+        </div>
+
+        <div style="padding:12px 14px;background:rgba(55,138,221,0.05);border:0.5px solid rgba(55,138,221,0.18);border-radius:8px">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.1em;color:var(--blue2);text-transform:uppercase;margin-bottom:5px">The material call</div>
+          <div style="font-size:11px;color:var(--txt2);line-height:1.6">Bow 10× over limit → AI switches AL6061 to <strong style="color:var(--txt)">Invar</strong>. CTE drops 20×. Bow drops to 1.38µm instantly. No human needed to figure that out.</div>
+        </div>
+
+        <div style="padding:12px 14px;background:rgba(175,169,236,0.05);border:0.5px solid rgba(175,169,236,0.18);border-radius:8px">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.1em;color:var(--purple);text-transform:uppercase;margin-bottom:5px">Mesh self-repair</div>
+          <div style="font-size:11px;color:var(--txt2);line-height:1.6">Iter 4: geometry became unmeshable. AI diagnosed, repaired parameters, re-ran. <strong style="color:var(--txt)">Zero human input.</strong></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ BOTTOM CTA + NEWSLETTER ══ -->
+    <div style="padding:20px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="wa-btn wa-primary" onclick="startRun()" style="padding:11px 28px;font-size:13px;border-radius:9px;display:flex;align-items:center;gap:8px">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="3,1 13,7 3,13" fill="white"/></svg>
+          Launch co-pilot
+        </button>
+        <button class="wa-btn wa-secondary" onclick="hideWelcome()" style="padding:11px 20px;font-size:12px;border-radius:9px">⚙ Tune parameters</button>
+      </div>
+
+      <!-- Newsletter -->
+      <div style="padding:12px 16px;background:rgba(10,102,194,0.1);border:0.5px solid rgba(10,102,194,0.3);border-radius:10px;max-width:300px;text-align:center">
+        <div style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--blue2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px">📬 Engineering IT Bridge</div>
+        <p style="font-size:10px;color:var(--txt3);line-height:1.5;margin-bottom:10px">AI-in-the-loop engineering · industrial automation · IT/OT integration — straight to your LinkedIn.</p>
+        <a href="https://www.linkedin.com/build-relation/newsletter-follow?entityUrn=7441198893234622464" target="_blank" style="display:inline-block;padding:6px 16px;border-radius:16px;background:#0A66C2;color:#fff;font-size:11px;font-weight:600;text-decoration:none;letter-spacing:0.01em;transition:background 0.2s" onmouseover="this.style.backgroundColor='#0958a8'" onmouseout="this.style.backgroundColor='#0A66C2'">Subscribe on LinkedIn</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RUN SCREEN -->
+  <div id="run-screen" class="hidden" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-step"><div class="ps-dot ps-idle" id="ps-geo"></div><span style="color:var(--txt2)">Geometry</span></div>
+      <div class="pipe-arr">→</div>
+      <div class="pipe-step"><div class="ps-dot ps-idle" id="ps-mesh"></div><span style="color:var(--txt2)">Mesh</span></div>
+      <div class="pipe-arr">→</div>
+      <div class="pipe-step"><div class="ps-dot ps-idle" id="ps-fea"></div><span style="color:var(--txt2)">FEA solve</span></div>
+      <div class="pipe-arr">→</div>
+      <div class="pipe-step"><div class="ps-dot ps-idle" id="ps-ai"></div><span style="color:var(--txt2)">AI reasoning</span></div>
+      <div class="pipe-arr">→</div>
+      <div class="pipe-step"><div class="ps-dot ps-idle" id="ps-conv"></div><span style="color:var(--txt2)">Converge</span></div>
+    </div>
+
+    <!-- COMPACT GEO + RESULTS ROW -->
+    <div class="geo-results-row">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Cross-section</span><span class="panel-badge pb-geo">LIVE</span></div>
+        <svg id="geo-svg" viewBox="0 0 260 150" width="100%"></svg>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">FEA results</span><span class="panel-badge pb-results" id="res-badge">PENDING</span></div>
+        <div class="results-grid">
+          <div class="res-card" id="rc-stress">
+            <div class="res-row"><span class="res-val tv-pend" id="rv-stress">—</span><span class="res-lim">/180</span></div>
+            <div class="res-lbl">Stress MPa</div>
+          </div>
+          <div class="res-card" id="rc-bow">
+            <div class="res-row"><span class="res-val tv-pend" id="rv-bow">—</span><span class="res-lim">/3µm</span></div>
+            <div class="res-lbl">Bow µm</div>
+          </div>
+          <div class="res-card" id="rc-temp">
+            <div class="res-row"><span class="res-val tv-pend" id="rv-temp">—</span><span class="res-lim">/120°C</span></div>
+            <div class="res-lbl">Max temp</div>
+          </div>
+          <div class="res-card" id="rc-mass">
+            <div class="res-row"><span class="res-val tv-pend" id="rv-mass">—</span><span class="res-lim">/3500g</span></div>
+            <div class="res-lbl">Mass</div>
+          </div>
+        </div>
+        <div class="cost-row">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--txt3)">cost</span>
+          <div class="cost-bar-wrap"><div class="cost-bar-fill" id="cost-bar" style="width:0%"></div></div>
+          <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--txt);min-width:36px;text-align:right" id="cost-score">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI REASONING -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">AI reasoning</span><span class="panel-badge pb-ai" id="ai-badge">WAITING</span></div>
+      <div class="reasoning-box" id="reasoning-box">Waiting for first solve to complete...</div>
+    </div>
+
+    <!-- ACCEPT PANEL -->
+    <div class="accept-panel hidden fade-in" id="accept-panel">
+      <div class="accept-title" id="accept-title">Iteration 1 — proposed parameters:</div>
+      <div class="proposed-params" id="proposed-params"></div>
+      <div class="accept-actions">
+        <button class="accept-btn ab-accept" onclick="acceptProposal()">Accept &amp; run next</button>
+        <button class="accept-btn ab-modify" onclick="modifyProposal()">Modify in sidebar</button>
+      </div>
+    </div>
+
+    <!-- DEMO LIMIT BANNER (shown after iter 5 when user started with custom params) -->
+    <div class="demo-limit-banner hidden" id="demo-limit-banner">
+      This analytical demo runs up to 5 iterations. For full multi-iteration optimisation with real FEA (FreeCAD + Gmsh + CalculiX), contact us to book a live session.
+    </div>
+
+    <!-- CONVERGENCE CHART -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Convergence</span><span class="panel-badge pb-chart">LIVE</span></div>
+      <div class="chart-area"><canvas id="conv-chart"></canvas></div>
+    </div>
+
+    <!-- ITERATION LOG -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Iteration log</span></div>
+      <div class="iter-log" id="iter-log"></div>
+    </div>
+
+    <!-- NEWSLETTER — run screen -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:linear-gradient(135deg,rgba(10,102,194,0.1),rgba(55,138,221,0.05));border:0.5px solid rgba(10,102,194,0.3);border-radius:9px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--blue2);font-family:var(--mono);letter-spacing:0.06em;margin-bottom:2px">📬 Engineering-IT Bridge Newsletter</div>
+        <div style="font-size:9px;color:var(--txt3);line-height:1.5">More AI-in-the-loop engineering deep-dives, straight to your LinkedIn feed.</div>
+      </div>
+      <a href="https://www.linkedin.com/build-relation/newsletter-follow?entityUrn=7441198893234622464" target="_blank" style="display:inline-flex;align-items:center;justify-content:center;padding:6px 16px;height:30px;border-radius:15px;background-color:#0A66C2;color:#fff!important;text-decoration:none!important;font-family:'SF Pro Text',Helvetica,sans-serif;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 2px 6px rgba(10,102,194,0.3);flex-shrink:0" onmouseover="this.style.backgroundColor='#0958a8'" onmouseout="this.style.backgroundColor='#0A66C2'">Subscribe on LinkedIn</a>
+    </div>
+
+  </div>
+
+  <!-- CONVERGED SCREEN -->
+  <div id="conv-screen" class="hidden fade-in">
+    <div class="conv-screen">
+      <div class="conv-icon">
+        <svg viewBox="0 0 32 32" width="32" height="32" fill="none">
+          <polyline points="6,16 13,23 26,9" stroke="#63C48A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="conv-title">Design Converged</div>
+      <div class="conv-sub" id="conv-summary">All physics targets satisfied. The optimiser has found a feasible, cost-minimised design.</div>
+      <div class="conv-stats" id="conv-stats"></div>
+      <div class="demo-notice">
+        <strong>This is an analytical demonstration.</strong> Results use calibrated physics models (bow, thermal stress, mass) that closely approximate real FEA. For production use, the same optimisation loop runs with full FreeCAD geometry, Gmsh meshing, and CalculiX finite element analysis — typically converging in 5–8 iterations with identical reasoning logic.
+      </div>
+      <div class="conv-actions">
+        <button class="conv-btn-primary" onclick="newChuck()">Design a new chuck</button>
+        <button class="conv-btn-secondary" onclick="reviewResults()">Review this run</button>
+      </div>
+
+      <!-- NEWSLETTER — converged screen -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:linear-gradient(135deg,rgba(10,102,194,0.1),rgba(55,138,221,0.05));border:0.5px solid rgba(10,102,194,0.3);border-radius:9px;flex-wrap:wrap;max-width:440px;width:100%">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--blue2);font-family:var(--mono);letter-spacing:0.06em;margin-bottom:2px">📬 Engineering-IT Bridge Newsletter</div>
+          <div style="font-size:9px;color:var(--txt3);line-height:1.5">More AI-in-the-loop engineering deep-dives, straight to your LinkedIn feed.</div>
+        </div>
+        <a href="https://www.linkedin.com/build-relation/newsletter-follow?entityUrn=7441198893234622464" target="_blank" style="display:inline-flex;align-items:center;justify-content:center;padding:6px 16px;height:30px;border-radius:15px;background-color:#0A66C2;color:#fff!important;text-decoration:none!important;font-family:'SF Pro Text',Helvetica,sans-serif;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 2px 6px rgba(10,102,194,0.3);flex-shrink:0" onmouseover="this.style.backgroundColor='#0958a8'" onmouseout="this.style.backgroundColor='#0A66C2'">Subscribe on LinkedIn</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- COST FUNCTION FOOTER — always visible -->
+  <div style="margin-top:auto;padding-top:10px;border-top:0.5px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px">
+    <span style="font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0">Cost&nbsp;=</span>
+    <span style="font-family:var(--mono);font-size:9px;white-space:nowrap"><span style="color:var(--amber)">0.35·mass</span> <span style="color:var(--txt3)">+</span> <span style="color:var(--teal)">0.25·cooling</span> <span style="color:var(--txt3)">+</span> <span style="color:var(--red)">0.15·matCost</span> <span style="color:var(--txt3)">+</span> <span style="color:var(--purple)">0.15·mfg</span> <span style="color:var(--txt3)">+</span> <span style="color:var(--green)">0.10·bow</span></span>
+    <span style="font-family:var(--mono);font-size:9px;color:var(--txt3);flex-shrink:0">— each term normalised 0→1, lower is better</span>
+  </div>
+
+</main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+var HTC_MAP   = [3e-5,5e-4,1e-3,3e-3,5e-3,8e-3,1e-2];
+var HTC_LBLS  = ['3e-5','5e-4','1e-3','3e-3','5e-3','8e-3','1e-2'];
+var MATERIALS = {
+  AL6061:{density:2.70e-9,E:68900,nu:0.33,cte:23.6e-6,yield_:276,cost:1.0,mfg:1.0},
+  AL7075:{density:2.81e-9,E:71700,nu:0.33,cte:23.6e-6,yield_:503,cost:1.4,mfg:1.2},
+  Invar: {density:8.05e-9,E:141000,nu:0.26,cte:1.2e-6, yield_:276,cost:4.2,mfg:2.5},
+  SiC:   {density:3.21e-9,E:410000,nu:0.17,cte:4.5e-6, yield_:310,cost:8.5,mfg:4.8}
+};
+var DEFAULT_PARAMS = {wall:14,top:3,cd:5,nc:4,material:'AL6061',htcIdx:0,heater:130};
+
+// ── State ──────────────────────────────────────────────────────────────────
+var state = {
+  running:false, iteration:0, converged:false,
+  history:[], pendingProposal:null,
+  params: Object.assign({},DEFAULT_PARAMS),
+  userCustomised: false   // true if user changed any slider before starting
+};
+var convChart=null, chartLabels=[], chartBow=[], chartCost=[];
+
+// ── Physics ────────────────────────────────────────────────────────────────
+function computePhysics(p) {
+  var mat=MATERIALS[p.material], R=100, H=25;
+  var ri=Math.max(5,R-p.wall);
+  var chLen=ri+2;
+  var Aw=(2*p.cd+4)*chLen*p.nc;
+  var Ab=Math.PI*R*R;
+  var NTU=Aw/Ab;
+  var eta=Math.min(0.98,Math.max(0.01,1-Math.exp(-NTU)));
+  var Teff=p.heater-eta*(p.heater-20);
+  var dT=Math.max(0,Teff-20);
+  var C=32.58;
+  var cteC=C*mat.cte*dT*10000/(8*Math.max(0.5,p.top));
+  var bow=(mat.cte<5e-6)?(cteC+0.8+dT*0.012):cteC;
+  var stress=(mat.E*mat.cte*dT)/(2*(1-mat.nu))+2.0;
+  var sf=mat.yield_/Math.max(stress,0.1);
+  var vol=Math.max(5000,Math.PI*R*R*H-Math.PI*ri*ri*(H-p.top)-p.nc*4*p.cd*chLen-6*Math.PI*16*12);
+  var mass=vol*mat.density*1e6;
+  var htc=HTC_MAP[p.htcIdx], Qw=htc*Aw*dT;
+  var massS=Math.min(1,Math.max(0,(mass-100)/5900));
+  var coolS=Math.min(1,Math.max(0,(Qw-0.5)/14999));
+  var matS=(mat.cost-1.0)/7.5, mfgS=(mat.mfg-1.0)/3.8, bowS=Math.min(1,bow/30);
+  var cost=0.35*massS+0.25*coolS+0.15*matS+0.15*mfgS+0.10*bowS;
+  return {
+    stress:Math.round(stress*10)/10, sf:Math.round(sf*100)/100,
+    bow:Math.round(bow*100)/100, temp:Math.round(Teff*10)/10,
+    mass:Math.round(mass), dT:Math.round(dT*10)/10,
+    eta:Math.round(eta*1000)/1000, cost:Math.round(cost*1000)/1000,
+    passed:stress<180&&bow<3.0&&Teff<120&&mass<3500
+  };
+}
+
+// ── REACTIVE REASONING ENGINE ─────────────────────────────────────────────
+// Reads actual physics results + history every call. No fixed script.
+// Produces different params each iteration by tracking which levers are used.
+function simulateReasoning(iter, res, p) {
+  var mat = MATERIALS[p.material];
+  var bowFail    = res.bow    > 3.0;
+  var stressFail = res.stress > 180;
+  var tempFail   = res.temp   > 120;
+  var allPass    = res.passed;
+
+  function costImprovement() {
+    var h = state.history;
+    return h.length >= 1 ? Math.round(Math.abs(h[h.length-1].results.cost - res.cost)*1000)/1000 : 1.0;
+  }
+  function paramsAtBounds() {
+    return p.wall <= 12 && p.top >= 8 && p.cd <= 3;
+  }
+
+  // ── CASE A: bow failing + high-CTE material (AL6061/AL7075) ─────────────
+  if (bowFail && mat.cte > 5e-6) {
+    var bowX = (res.bow / 3.0).toFixed(1);
+    var maxTopBow = (32.58 * mat.cte * res.dT * 10000 / (8 * 8)).toFixed(1);
+    return {
+      rationale: 'Bow ' + res.bow + 'µm is ' + bowX + '× over the 3µm limit. '
+        + p.material + ' CTE=' + (mat.cte*1e6).toFixed(1) + 'µm/m°C: even at max top plate (8mm), '
+        + 'bow would be ~' + maxTopBow + 'µm (' + (parseFloat(maxTopBow)/3).toFixed(1) + '× over). '
+        + 'Material escalation required. Switching to Invar (CTE 1.2µm/m°C, '
+        + Math.round(mat.cte/1.2e-6) + '× lower) with max HTC and channels gives ~'
+        + Math.round(res.bow/2.5) + '× combined bow reduction.',
+      primary_issue: 'bow',
+      next_wall: Math.max(p.wall, 16), next_top: 8, next_cd: 7, next_nc: 10,
+      next_material: 'Invar', next_htc_idx: 6, converged: false
+    };
+  }
+
+  // ── CASE B: bow failing + low-CTE material (Invar/SiC) ──────────────────
+  if (bowFail && mat.cte <= 5e-6) {
+    var htcNew = Math.min(6, p.htcIdx + 2);
+    var ncNew  = Math.min(10, p.nc + 2);
+    var topNew = Math.min(8, p.top + 2);
+    return {
+      rationale: 'Bow ' + res.bow + 'µm exceeds 3µm. With ' + p.material
+        + ' (CTE ' + (mat.cte*1e6).toFixed(1) + 'µm/m°C) bow is driven by ΔT=' + res.dT + '°C. '
+        + 'Increasing HTC ' + HTC_LBLS[p.htcIdx] + '→' + HTC_LBLS[htcNew]
+        + ' and channels ' + p.nc + '→' + ncNew + ' reduces ΔT directly. '
+        + 'Top plate ' + p.top + '→' + topNew + 'mm for added stiffness.',
+      primary_issue: 'bow',
+      next_wall: p.wall, next_top: topNew, next_cd: p.cd, next_nc: ncNew,
+      next_material: p.material, next_htc_idx: htcNew, converged: false
+    };
+  }
+
+  // ── CASE C: stress failing ────────────────────────────────────────────────
+  if (stressFail) {
+    var htcNew = Math.min(6, p.htcIdx + 2);
+    return {
+      rationale: 'Stress ' + res.stress + 'MPa exceeds 180MPa (SF=' + res.sf + '). '
+        + 'Thermal stress σ≈E·α·ΔT/2(1-ν) scales with ΔT=' + res.dT + '°C. '
+        + 'HTC ' + HTC_LBLS[p.htcIdx] + '→' + HTC_LBLS[htcNew]
+        + ' with +2 channels reduces ΔT. Wall +2mm adds section modulus.',
+      primary_issue: 'stress',
+      next_wall: Math.min(18, p.wall + 2), next_top: p.top, next_cd: p.cd,
+      next_nc: Math.min(10, p.nc + 2),
+      next_material: p.material, next_htc_idx: htcNew, converged: false
+    };
+  }
+
+  // ── CASE D: temp failing ──────────────────────────────────────────────────
+  if (tempFail) {
+    var htcNew = Math.min(6, p.htcIdx + 3);
+    var ncNew  = Math.min(12, p.nc + 4);
+    return {
+      rationale: 'Teff=' + res.temp + '°C exceeds 120°C. Cooling η='
+        + (res.eta*100).toFixed(0) + '% is insufficient. '
+        + 'HTC ' + HTC_LBLS[p.htcIdx] + '→' + HTC_LBLS[htcNew]
+        + ' and channels ' + p.nc + '→' + ncNew + ' to maximise wetted area.',
+      primary_issue: 'temp',
+      next_wall: p.wall, next_top: p.top, next_cd: Math.max(3, p.cd),
+      next_nc: ncNew,
+      next_material: p.material, next_htc_idx: htcNew, converged: false
+    };
+  }
+
+  // ── All physics PASS — cost optimisation ─────────────────────────────────
+  var imp = costImprovement();
+  if (allPass && res.cost < 0.70 && (paramsAtBounds() || (iter >= 3 && imp < 0.015))) {
+    return {
+      rationale: 'Convergence criteria met. All physics targets pass: stress ' + res.stress
+        + 'MPa (SF=' + res.sf + '), bow ' + res.bow + 'µm (+'
+        + (3.0-res.bow).toFixed(2) + 'µm margin), temp ' + res.temp + '°C, mass ' + res.mass + 'g. '
+        + 'Cost ' + res.cost + ' < 0.70. '
+        + (paramsAtBounds()
+            ? 'All geometry parameters at bounds — no further design freedom.'
+            : 'Improvement ' + (imp*100).toFixed(1) + '% < 1.5% threshold.'),
+      primary_issue: 'converged',
+      next_wall: p.wall, next_top: p.top, next_cd: p.cd, next_nc: p.nc,
+      next_material: p.material, next_htc_idx: p.htcIdx, converged: true
+    };
+  }
+
+  // ── Identify dominant cost sub-score ─────────────────────────────────────
+  var ri      = Math.max(5, 100 - p.wall);
+  var Aw      = (2*p.cd + 4) * (ri+2) * p.nc;
+  var htcVal  = HTC_MAP[p.htcIdx];
+  var Qw      = htcVal * Aw * res.dT;
+  var coolScore = Math.min(1, Math.max(0, (Qw - 0.5) / 14999));
+  var massScore = Math.min(1, Math.max(0, (res.mass - 100) / 5900));
+  var bowMargin = (3.0 - res.bow).toFixed(2);
+
+  var canReduceHTC  = p.htcIdx > 1;
+  var canReduceNC   = p.nc > 4;
+  var canReduceWall = p.wall > 12;
+  var canReduceCD   = p.cd > 3;
+
+  var nWall = p.wall, nTop = p.top, nCd = p.cd, nNc = p.nc;
+  var nMat  = p.material, nHtc = p.htcIdx;
+  var ratParts = [];
+
+  if (coolScore > massScore && canReduceHTC) {
+    var bowHeadroom = 3.0 - res.bow;
+    var htcSteps = bowHeadroom > 1.0 ? 2 : 1;
+    nHtc = Math.max(1, p.htcIdx - htcSteps);
+    if (canReduceNC && p.nc > 6) nNc = Math.max(6, p.nc - 2);
+    ratParts.push('Cooling power dominates cost (score ' + coolScore.toFixed(2) + '). '
+      + 'Bow margin ' + bowMargin + 'µm and SF=' + res.sf + ' allow HTC '
+      + HTC_LBLS[p.htcIdx] + '→' + HTC_LBLS[nHtc]
+      + (nNc < p.nc ? ' and channels ' + p.nc + '→' + nNc : '') + '.');
+  } else if (massScore > 0.05 && canReduceWall) {
+    nWall = Math.max(12, p.wall - 2);
+    if (canReduceCD) nCd = Math.max(3, p.cd - 1);
+    ratParts.push('Mass dominates cost (' + res.mass + 'g, score ' + massScore.toFixed(2) + '). '
+      + 'SF=' + res.sf + ' allows wall ' + p.wall + '→' + nWall + 'mm.'
+      + (nCd < p.cd ? ' cd ' + p.cd + '→' + nCd + 'mm (manufacturing).' : ''));
+  } else if (canReduceCD) {
+    nCd = Math.max(3, p.cd - 1);
+    ratParts.push('Cost ' + res.cost + ' near threshold. Final lever: cd ' + p.cd + '→' + nCd + 'mm reduces manufacturing score.');
+  } else if (canReduceHTC) {
+    nHtc = Math.max(1, p.htcIdx - 1);
+    ratParts.push('Geometry at minimum bounds. Final HTC ' + HTC_LBLS[p.htcIdx] + '→' + HTC_LBLS[nHtc] + '. Bow margin ' + bowMargin + 'µm sufficient.');
+  } else {
+    return {
+      rationale: 'All parameters at bounds. Cost ' + res.cost
+        + ' is minimum achievable. Stress ' + res.stress + 'MPa, bow ' + res.bow + 'µm — all targets met. Converging.',
+      primary_issue: 'converged',
+      next_wall: p.wall, next_top: p.top, next_cd: p.cd, next_nc: p.nc,
+      next_material: p.material, next_htc_idx: p.htcIdx, converged: true
+    };
+  }
+
+  ratParts.push('Physics confirmed: bow ' + res.bow + 'µm, stress ' + res.stress + 'MPa, temp ' + res.temp + '°C.');
+  return {
+    rationale: ratParts.join(' '),
+    primary_issue: 'cost',
+    next_wall: nWall, next_top: nTop, next_cd: nCd, next_nc: nNc,
+    next_material: nMat, next_htc_idx: nHtc, converged: false
+  };
+}
+
+
+// ── API call ───────────────────────────────────────────────────────────────
+async function callAI(iter, res, p) {
+  var apiKey = document.getElementById('api-key').value.trim();
+  if (!apiKey || !apiKey.startsWith('sk-ant-')) {
+    await delay(1200);
+    return simulateReasoning(iter, res, p);
+  }
+
+  var histSummary = state.history.length === 0 ? 'None (first iteration).' :
+    state.history.map(function(h) {
+      return 'Iter ' + h.iter + ': ' + h.params.material
+        + ' wall=' + h.params.wall + ' top=' + h.params.top
+        + ' cd=' + h.params.cd + ' nc=' + h.params.nc
+        + ' htcIdx=' + h.params.htcIdx
+        + ' bow=' + h.results.bow + 'um stress=' + h.results.stress
+        + 'MPa cost=' + h.results.cost
+        + (h.results.passed ? ' PASS' : ' FAIL');
+    }).join(' | ');
+
+  var prompt =
+    'You are an AI co-pilot optimising a 200mm semiconductor wafer chuck.\n'
+    + 'Heater fixed at ' + p.heater + 'C bottom. Coolant inlet 20C.\n'
+    + 'Targets: stress<180MPa, bow<3.0um, temp<120C, mass<3500g, cost<0.70.\n\n'
+    + 'Materials: AL6061(CTE=23.6,E=68900,yield=276,cost=1.0) AL7075(CTE=23.6,E=71700,yield=503,cost=1.4) Invar(CTE=1.2,E=141000,yield=276,cost=4.2) SiC(CTE=4.5,E=410000,yield=310,cost=8.5)\n\n'
+    + 'HTC index 0-6: 0=3e-5, 1=5e-4, 2=1e-3, 3=3e-3, 4=5e-3, 5=8e-3, 6=1e-2 W/mm2C\n'
+    + 'Bounds: wall 10-20mm | top 2-10mm | cd 2-9mm | nc one of 4,6,8,10,12 | htc_idx 0-6\n\n'
+    + 'History: ' + histSummary + '\n\n'
+    + 'Current iteration ' + iter + ':\n'
+    + 'Material=' + p.material + ' CTE=' + (MATERIALS[p.material].cte*1e6).toFixed(1) + 'um/mC\n'
+    + 'wall=' + p.wall + 'mm top=' + p.top + 'mm cd=' + p.cd + 'mm nc=' + p.nc + ' htcIdx=' + p.htcIdx + '\n'
+    + 'stress=' + res.stress + 'MPa bow=' + res.bow + 'um temp=' + res.temp + 'C mass=' + res.mass + 'g SF=' + res.sf + '\n'
+    + 'cost=' + res.cost + ' dT=' + res.dT + 'C eta=' + (res.eta*100).toFixed(0) + '% allPass=' + res.passed + '\n\n'
+    + 'Respond ONLY with this JSON (no markdown, all integers for numeric fields):\n'
+    + '{"rationale":"2-3 sentence diagnosis referencing actual numbers","primary_issue":"bow|stress|temp|cost|converged","next_wall":integer,"next_top":integer,"next_cd":integer,"next_nc":integer_one_of_4_6_8_10_12,"next_material":"AL6061|AL7075|Invar|SiC","next_htc_idx":integer_0_to_6,"converged":boolean}';
+
+  try {
+    document.getElementById('ai-badge').textContent = 'API CALL';
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 600,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!resp.ok) {
+      console.warn('API error', resp.status);
+      return simulateReasoning(iter, res, p);
+    }
+
+    var data = await resp.json();
+    var txt = data.content[0].text.replace(/```json|```/g, '').trim();
+    var parsed = JSON.parse(txt);
+
+    // Clamp and validate all returned values
+    var validNc = [4,6,8,10,12];
+    var rawNc = Math.round(Number(parsed.next_nc) || p.nc);
+    parsed.next_wall    = Math.round(Math.min(20, Math.max(10, Number(parsed.next_wall)    || p.wall)));
+    parsed.next_top     = Math.round(Math.min(10, Math.max(2,  Number(parsed.next_top)     || p.top)));
+    parsed.next_cd      = Math.round(Math.min(9,  Math.max(2,  Number(parsed.next_cd)      || p.cd)));
+    parsed.next_nc      = validNc.reduce(function(a,b){ return Math.abs(b-rawNc)<Math.abs(a-rawNc)?b:a; });
+    parsed.next_htc_idx = Math.round(Math.min(6, Math.max(0,  Number(parsed.next_htc_idx) !== undefined ? Number(parsed.next_htc_idx) : p.htcIdx)));
+    if (!MATERIALS[parsed.next_material]) parsed.next_material = p.material;
+    parsed.converged    = Boolean(parsed.converged);
+    return parsed;
+
+  } catch(e) {
+    console.warn('API call failed, falling back:', e);
+    return simulateReasoning(iter, res, p);
+  }
+}
+
+// ── Geo SVG ────────────────────────────────────────────────────────────────
+function updateGeo(){
+  var p=state.params;
+  var svg=document.getElementById('geo-svg');
+  var W=260,H=150,cx=W/2;
+  var scl=1.05,R=100*scl,ri=Math.max(4,(100-p.wall)*scl);
+  var tH=25*scl,topH=p.top*scl,cdH=p.cd*scl;
+  var cy=H*0.52;
+  var o='';
+  // outer
+  o+='<rect x="'+(cx-R)+'" y="'+(cy-tH)+'" width="'+(2*R)+'" height="'+tH+'" rx="3" fill="rgba(55,138,221,0.07)" stroke="rgba(55,138,221,0.32)" stroke-width="0.8"/>';
+  // cavity
+  if(ri>6) o+='<rect x="'+(cx-ri)+'" y="'+(cy-tH+topH)+'" width="'+(2*ri)+'" height="'+(tH-topH)+'" rx="2" fill="rgba(5,12,24,0.95)" stroke="rgba(55,138,221,0.18)" stroke-width="0.5"/>';
+  // channels
+  var nc=Math.min(p.nc,10),cw=4*scl;
+  var sp=(2*ri-cw*nc)/(nc+1);
+  if(sp>1&&ri>6){
+    for(var i=0;i<nc;i++){
+      var cx2=cx-ri+sp*(i+1)+cw*i;
+      o+='<rect x="'+cx2+'" y="'+(cy-tH+topH)+'" width="'+cw+'" height="'+cdH+'" rx="1" fill="rgba(93,202,165,0.22)" stroke="rgba(93,202,165,0.5)" stroke-width="0.5"/>';
+    }
+  }
+  // heater
+  o+='<rect x="'+(cx-R)+'" y="'+(cy-2)+'" width="'+(2*R)+'" height="4" rx="1" fill="rgba(245,192,96,0.13)" stroke="rgba(245,192,96,0.38)" stroke-width="0.5"/>';
+  o+='<text x="'+cx+'" y="'+(cy+10)+'" text-anchor="middle" font-size="8" fill="rgba(245,192,96,0.6)" font-family="monospace">130°C heater</text>';
+  // top plate label
+  o+='<text x="'+(cx-R-4)+'" y="'+(cy-tH+topH/2+3)+'" text-anchor="end" font-size="8" fill="rgba(55,138,221,0.55)" font-family="monospace">'+p.top.toFixed(1)+'mm</text>';
+  // channel label
+  if(ri>14) o+='<text x="'+cx+'" y="'+(cy-tH+topH+cdH/2+3)+'" text-anchor="middle" font-size="8" fill="rgba(93,202,165,0.55)" font-family="monospace">'+nc+'ch</text>';
+  // wall label
+  o+='<text x="'+(cx+R+4)+'" y="'+(cy-tH/2+3)+'" text-anchor="start" font-size="8" fill="rgba(175,169,236,0.5)" font-family="monospace">'+p.wall+'mm</text>';
+  // diameter
+  o+='<text x="'+cx+'" y="'+(cy-tH-4)+'" text-anchor="middle" font-size="8" fill="rgba(55,138,221,0.45)" font-family="monospace">200mm dia</text>';
+  svg.innerHTML=o;
+}
+
+// ── Chart ──────────────────────────────────────────────────────────────────
+function initChart(){
+  var ctx=document.getElementById('conv-chart').getContext('2d');
+  convChart=new Chart(ctx,{
+    type:'line',
+    data:{labels:chartLabels,datasets:[
+      {label:'Bow µm',data:chartBow,borderColor:'#F08080',backgroundColor:'rgba(240,128,128,0.07)',pointBackgroundColor:'#F08080',tension:0.3,yAxisID:'y'},
+      {label:'Cost',data:chartCost,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.07)',pointBackgroundColor:'#378ADD',tension:0.3,yAxisID:'y2',borderDash:[4,2]}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:{duration:350},
+      plugins:{legend:{labels:{color:'#8A9BAE',font:{family:'JetBrains Mono',size:9}}},
+        tooltip:{backgroundColor:'#0c1628',titleColor:'#E2EBF5',bodyColor:'#8A9BAE',borderColor:'#378ADD',borderWidth:0.5}},
+      scales:{
+        x:{ticks:{color:'#4A5F70',font:{family:'JetBrains Mono',size:9}},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{ticks:{color:'#F08080',font:{family:'JetBrains Mono',size:9}},grid:{color:'rgba(255,255,255,0.04)'},title:{display:true,text:'Bow µm',color:'#F08080',font:{size:8}}},
+        y2:{position:'right',ticks:{color:'#378ADD',font:{family:'JetBrains Mono',size:9}},grid:{display:false},title:{display:true,text:'Cost',color:'#378ADD',font:{size:8}},min:0,max:1}
+      }
+    }
+  });
+}
+function updateChart(iter,bow,cost){
+  chartLabels.push('I'+iter); chartBow.push(Math.round(bow*100)/100); chartCost.push(Math.round(cost*1000)/1000);
+  if(convChart) convChart.update();
+}
+
+// ── Pipeline ───────────────────────────────────────────────────────────────
+function setPipe(step,st){
+  var ids=['ps-geo','ps-mesh','ps-fea','ps-ai','ps-conv'];
+  var el=document.getElementById(ids[step]); if(el) el.className='ps-dot ps-'+st;
+}
+function delay(ms){return new Promise(function(r){setTimeout(r,ms)});}
+
+// ── Results display ────────────────────────────────────────────────────────
+function showResults(res){
+  function upd(id,val,limit,isLower){
+    var el=document.getElementById('rv-'+id), card=document.getElementById('rc-'+id);
+    el.textContent=val;
+    var pass=isLower?(parseFloat(val)<limit):(parseFloat(val)>limit);
+    el.className='res-val '+(pass?'pass':'fail');
+    card.className='res-card '+(pass?'pass':'fail');
+    var t=document.getElementById('t-'+id);
+    if(t){t.className='target-val '+(pass?'tv-pass':'tv-fail');}
+  }
+  upd('stress',res.stress.toFixed(1),180,true);
+  upd('bow',res.bow.toFixed(2),3.0,true);
+  upd('temp',res.temp.toFixed(1),120,true);
+  upd('mass',res.mass,3500,true);
+  document.getElementById('t-stress').textContent=res.stress.toFixed(1)+' / 180 MPa';
+  document.getElementById('t-bow').textContent=res.bow.toFixed(2)+' / 3.0 µm';
+  document.getElementById('t-temp').textContent=res.temp.toFixed(1)+' / 120°C';
+  document.getElementById('t-mass').textContent=res.mass+' / 3500g';
+  var pct=Math.round(res.cost*100);
+  document.getElementById('cost-score').textContent=res.cost.toFixed(3);
+  document.getElementById('cost-bar').style.width=pct+'%';
+  document.getElementById('cost-bar').style.background=res.cost<0.5?'#63C48A':res.cost<0.7?'#F5C060':'#F08080';
+  document.getElementById('res-badge').textContent=res.passed?'ALL PASS':'FAILING';
+  document.getElementById('res-badge').className='panel-badge '+(res.passed?'pb-results':'pb-chart');
+}
+
+// ── Stream reasoning ───────────────────────────────────────────────────────
+async function streamReasoning(text){
+  var box=document.getElementById('reasoning-box');
+  box.textContent='';
+  document.getElementById('ai-badge').textContent='THINKING';
+  for(var i=0;i<text.length;i++){
+    box.textContent+=text[i]; box.scrollTop=box.scrollHeight; await delay(7);
+  }
+  document.getElementById('ai-badge').textContent='DONE';
+}
+
+// ── Proposal panel ─────────────────────────────────────────────────────────
+function showProposal(iter,proposal,prev){
+  var panel=document.getElementById('accept-panel');
+  document.getElementById('accept-title').textContent='Iteration '+iter+' complete — proposed for next:';
+  var changes=[
+    {name:'wall',val:proposal.next_wall+'mm',prev:prev.wall+'mm',ch:proposal.next_wall!==prev.wall},
+    {name:'top_plate',val:proposal.next_top+'mm',prev:prev.top+'mm',ch:proposal.next_top!==prev.top},
+    {name:'ch_depth',val:proposal.next_cd+'mm',prev:prev.cd+'mm',ch:proposal.next_cd!==prev.cd},
+    {name:'num_ch',val:proposal.next_nc,prev:prev.nc,ch:proposal.next_nc!==prev.nc},
+    {name:'material',val:proposal.next_material,prev:prev.material,ch:proposal.next_material!==prev.material},
+    {name:'HTC',val:HTC_LBLS[proposal.next_htc_idx],prev:HTC_LBLS[prev.htcIdx],ch:proposal.next_htc_idx!==prev.htcIdx},
+  ];
+  document.getElementById('proposed-params').innerHTML=changes.map(function(c){
+    return '<div class="pp-item"><div class="pp-name">'+c.name+'</div>'
+      +'<div class="pp-val'+(c.ch?'':'" style="color:var(--txt2)')+'">'+c.val+'</div>'
+      +(c.ch?'<div class="pp-prev">was: '+c.prev+'</div>':'')+'</div>';
+  }).join('');
+  state.pendingProposal=proposal;
+  panel.classList.remove('hidden'); panel.classList.add('fade-in');
+}
+
+function acceptProposal(){
+  var p=state.pendingProposal; if(!p) return;
+  applyProposal(p);
+  document.getElementById('accept-panel').classList.add('hidden');
+  if(!p.converged) runIteration(); else showConvergedScreen();
+}
+
+function modifyProposal(){
+  var p=state.pendingProposal; if(p) applyProposal(p);
+  document.getElementById('accept-panel').classList.add('hidden');
+  enableSidebar(true);
+  var btn=document.getElementById('run-btn');
+  btn.textContent='Run next iteration'; btn.disabled=false;
+  btn.onclick=function(){
+    enableSidebar(false); btn.textContent='Running...'; btn.disabled=true;
+    runIteration();
+  };
+}
+
+function applyProposal(p){
+  state.params.wall=p.next_wall; state.params.top=p.next_top;
+  state.params.cd=p.next_cd; state.params.nc=p.next_nc;
+  state.params.material=p.next_material; state.params.htcIdx=p.next_htc_idx;
+  syncSidebar(); updateGeo();
+}
+
+function syncSidebar(){
+  var p=state.params;
+  document.getElementById('s-wall').value=p.wall; document.getElementById('v-wall').textContent=p.wall.toFixed(1)+' mm';
+  document.getElementById('s-top').value=p.top;   document.getElementById('v-top').textContent=p.top.toFixed(1)+' mm';
+  document.getElementById('s-cd').value=p.cd;     document.getElementById('v-cd').textContent=p.cd.toFixed(1)+' mm';
+  document.getElementById('s-nc').value=p.nc;     document.getElementById('v-nc').textContent=p.nc;
+  document.getElementById('s-htc').value=p.htcIdx; document.getElementById('v-htc').textContent=HTC_LBLS[p.htcIdx];
+  document.querySelectorAll('#mat-sel .mat-btn').forEach(function(b){
+    b.classList.toggle('active',b.getAttribute('data-mat')===p.material);
+  });
+}
+
+// ── Iteration log ──────────────────────────────────────────────────────────
+function addIterLog(iter,res,mat,p){
+  var log=document.getElementById('iter-log');
+  var row=document.createElement('div');
+  row.className='iter-row-full fade-in';
+  var numCls=res.passed?'irn-pass':'irn-fail';
+  var stressCls=res.stress<180?'pass':'fail';
+  var bowCls=res.bow<3?'pass':'fail';
+  var tempCls=res.temp<120?'pass':'fail';
+  var massCls=res.mass<3500?'pass':'fail';
+  row.innerHTML=
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+    +'<div class="ir-num '+numCls+'">'+iter+'</div>'
+    +'<span style="font-family:var(--mono);font-size:10px;color:var(--txt2);font-weight:600">'+mat+'</span>'
+    +'<span style="font-family:var(--mono);font-size:9px;color:var(--txt3)">wall='+p.wall+'mm top='+p.top+'mm cd='+p.cd+'mm nc='+p.nc+' htc='+HTC_LBLS[p.htcIdx]+'</span>'
+    +'<span class="ir-status '+(res.passed?'irs-pass':'irs-fail')+'" style="margin-left:auto">'+(res.passed?'PASS':'FAIL')+'</span>'
+    +'</div>'
+    +'<div class="ir-metrics">'
+    +'<div class="irm"><div class="irm-lbl">Stress</div><div class="irm-val '+stressCls+'">'+res.stress.toFixed(0)+' MPa</div><div class="irm-lim">/180</div></div>'
+    +'<div class="irm"><div class="irm-lbl">Bow</div><div class="irm-val '+bowCls+'">'+res.bow.toFixed(2)+'</div><div class="irm-lim">/3µm</div></div>'
+    +'<div class="irm"><div class="irm-lbl">Temp</div><div class="irm-val '+tempCls+'">'+res.temp.toFixed(0)+'°C</div><div class="irm-lim">/120</div></div>'
+    +'<div class="irm"><div class="irm-lbl">Mass</div><div class="irm-val '+massCls+'">'+res.mass+'g</div><div class="irm-lim">/3500</div></div>'
+    +'<div class="irm"><div class="irm-lbl">SF</div><div class="irm-val '+(res.sf>=1.5?'pass':'fail')+'">'+res.sf.toFixed(1)+'</div><div class="irm-lim">>1.5</div></div>'
+    +'<div class="irm"><div class="irm-lbl">Cost</div><div class="irm-val warn">'+res.cost.toFixed(3)+'</div><div class="irm-lim">/0.70</div></div>'
+    +'</div>';
+  log.appendChild(row);
+}
+
+// ── Converged screen ───────────────────────────────────────────────────────
+function showConvergedScreen(){
+  var lastH=state.history[state.history.length-1];
+  var res=lastH.results, p=lastH.params;
+  document.getElementById('conv-summary').textContent=
+    'Converged in '+state.iteration+' iterations. Material: '+p.material+'. All physics targets satisfied.';
+  document.getElementById('conv-stats').innerHTML=
+    '<div class="conv-stat"><div class="conv-stat-val pass">'+res.stress.toFixed(0)+'</div><div class="conv-stat-lbl">Stress MPa</div></div>'
+    +'<div class="conv-stat"><div class="conv-stat-val pass">'+res.bow.toFixed(2)+'</div><div class="conv-stat-lbl">Bow µm</div></div>'
+    +'<div class="conv-stat"><div class="conv-stat-val pass">'+res.temp.toFixed(0)+'°C</div><div class="conv-stat-lbl">Max temp</div></div>'
+    +'<div class="conv-stat"><div class="conv-stat-val warn">'+res.cost.toFixed(3)+'</div><div class="conv-stat-lbl">Cost score</div></div>';
+  document.getElementById('run-screen').classList.add('hidden');
+  document.getElementById('conv-screen').classList.remove('hidden');
+}
+
+function newChuck(){
+  resetAll();
+  // stay on welcome screen — already shown by resetAll
+}
+
+function reviewResults(){
+  document.getElementById('conv-screen').classList.add('hidden');
+  document.getElementById('run-screen').classList.remove('hidden');
+}
+
+// ── Main run loop ──────────────────────────────────────────────────────────
+function enableSidebar(on){
+  ['s-wall','s-top','s-cd','s-nc','s-htc'].forEach(function(id){
+    document.getElementById(id).disabled=!on;
+  });
+  document.querySelectorAll('#mat-sel .mat-btn').forEach(function(b){b.disabled=!on;});
+}
+
+async function runIteration(){
+  state.iteration++;
+  var iter=state.iteration;
+  var p=Object.assign({},state.params);
+  document.getElementById('iter-badge').textContent='ITER '+iter;
+  document.getElementById('iter-badge').className='iter-badge ib-run';
+
+  setPipe(0,'run'); await delay(500); setPipe(0,'done'); updateGeo();
+  setPipe(1,'run'); await delay(400); setPipe(1,'done');
+  setPipe(2,'run'); await delay(800);
+  var res=computePhysics(p);
+  setPipe(2,'done');
+
+  showResults(res);
+  updateChart(iter,res.bow,res.cost);
+  addIterLog(iter,res,p.material,p);
+
+  setPipe(3,'run');
+  document.getElementById('reasoning-box').innerHTML='<span class="cursor"></span>';
+  var proposal=await callAI(iter,res,p);
+
+  var matChg=proposal.next_material!==p.material;
+  var txt=
+    '┌─ ITER '+iter+' ─── '+p.material+' | wall='+p.wall+'mm top='+p.top+'mm cd='+p.cd+'mm×'+p.nc+' HTC='+HTC_LBLS[p.htcIdx]+'\n│\n'
+    +'│  THERMAL  Teff='+res.temp.toFixed(1)+'°C  ΔT='+res.dT+'°C  η='+(res.eta*100).toFixed(0)+'%\n│\n'
+    +'│  RESULTS\n'
+    +'│  Stress '+res.stress.toFixed(1)+' MPa  '+(res.stress<180?'[PASS ✓]  SF='+res.sf.toFixed(1):'[FAIL ✗]  SF='+res.sf.toFixed(2))+'\n'
+    +'│  Bow    '+res.bow.toFixed(2)+' µm   '+(res.bow<3.0?'[PASS ✓]  +'+( 3.0-res.bow).toFixed(2)+'µm headroom':'[FAIL ✗]  '+(res.bow/3).toFixed(1)+'× over limit')+'\n'
+    +'│  Temp   '+res.temp.toFixed(1)+' °C   '+(res.temp<120?'[PASS ✓]':'[FAIL ✗]')+'\n'
+    +'│  Mass   '+res.mass+' g     '+(res.mass<3500?'[PASS ✓]':'[FAIL ✗]')+'\n'
+    +'│  Cost   '+res.cost.toFixed(3)+'       '+(res.cost<0.70?'[OK]':'[HIGH]')+'\n│\n'
+    +'│  DIAGNOSIS\n│  '+proposal.rationale.replace(/\. /g,'.\n│  ')+'\n│\n'
+    +'│  PROPOSED\n'
+    +'│  wall='+proposal.next_wall+'mm  top='+proposal.next_top+'mm  cd='+proposal.next_cd+'mm  nc='+proposal.next_nc+'\n'
+    +'│  material='+proposal.next_material+(matChg?'  ← SWITCH from '+p.material:'')+'\n'
+    +'│  HTC='+HTC_LBLS[proposal.next_htc_idx]+(proposal.next_htc_idx!==p.htcIdx?'  ← was '+HTC_LBLS[p.htcIdx]:'')+'\n│\n'
+    +(proposal.converged
+      ?'└─ CONVERGED ✓  cost='+res.cost.toFixed(3)+' < 0.70 | all targets met\n'
+      :'└─ awaiting acceptance...\n');
+
+  await streamReasoning(txt);
+  setPipe(3,'done');
+  state.history.push({iter,params:p,results:res,proposal});
+
+  // ── Hard stop at iter 5 if user customised ─────────────────────────────
+  if(state.userCustomised && iter>=5 && !proposal.converged){
+    setPipe(4,'done');
+    document.getElementById('accept-panel').classList.add('hidden');
+    document.getElementById('demo-limit-banner').classList.remove('hidden');
+    document.getElementById('iter-badge').textContent='DEMO LIMIT';
+    document.getElementById('iter-badge').className='iter-badge ib-done';
+    enableSidebar(true);
+    var btn=document.getElementById('run-btn');
+    btn.textContent='Design new chuck'; btn.disabled=false;
+    btn.onclick=function(){resetAll();};
+    return;
+  }
+
+  if(proposal.converged||iter>=8){
+    setPipe(4,'done');
+    document.getElementById('accept-panel').classList.add('hidden');
+    showConvergedScreen();
+    return;
+  }
+
+  showProposal(iter,proposal,p);
+}
+
+function startRun(){
+  if(state.running) return;
+  state.running=true;
+  // detect if user changed defaults
+  var d=DEFAULT_PARAMS;
+  state.userCustomised=(state.params.wall!==d.wall||state.params.top!==d.top||
+    state.params.cd!==d.cd||state.params.nc!==d.nc||
+    state.params.material!==d.material||state.params.htcIdx!==d.htcIdx);
+
+  hideWelcome();
+  document.getElementById('run-btn').textContent='Running...';
+  document.getElementById('run-btn').disabled=true;
+  enableSidebar(false);
+  if(!convChart) initChart();
+  updateGeo();
+  runIteration();
+}
+
+function hideWelcome(){
+  document.getElementById('welcome-screen').classList.add('hidden');
+  document.getElementById('run-screen').classList.remove('hidden');
+  document.getElementById('run-screen').classList.add('fade-in');
+  document.getElementById('conv-screen').classList.add('hidden');
+}
+
+function resetAll(){
+  state={running:false,iteration:0,converged:false,history:[],pendingProposal:null,
+    params:Object.assign({},DEFAULT_PARAMS),userCustomised:false};
+  chartLabels.length=0; chartBow.length=0; chartCost.length=0;
+  if(convChart) convChart.update();
+
+  syncSidebar(); updateGeo(); enableSidebar(true);
+
+  document.getElementById('iter-badge').textContent='IDLE';
+  document.getElementById('iter-badge').className='iter-badge ib-idle';
+  var btn=document.getElementById('run-btn');
+  btn.textContent='Run Copilot'; btn.disabled=false; btn.onclick=startRun;
+
+  document.getElementById('accept-panel').classList.add('hidden');
+  document.getElementById('demo-limit-banner').classList.add('hidden');
+  document.getElementById('iter-log').innerHTML='';
+
+  ['stress','bow','temp','mass'].forEach(function(id){
+    document.getElementById('rv-'+id).textContent='—';
+    document.getElementById('rv-'+id).className='res-val tv-pend';
+    document.getElementById('rc-'+id).className='res-card';
+  });
+  document.getElementById('t-stress').textContent='— / 180 MPa';
+  document.getElementById('t-bow').textContent='— / 3.0 µm';
+  document.getElementById('t-temp').textContent='— / 120°C';
+  document.getElementById('t-mass').textContent='— / 3500g';
+  document.getElementById('cost-score').textContent='—';
+  document.getElementById('cost-bar').style.width='0%';
+  document.getElementById('res-badge').textContent='PENDING';
+  document.getElementById('res-badge').className='panel-badge pb-results';
+  document.getElementById('ai-badge').textContent='WAITING';
+  document.getElementById('reasoning-box').textContent='Waiting for first solve to complete...';
+  ['ps-geo','ps-mesh','ps-fea','ps-ai','ps-conv'].forEach(function(id){
+    document.getElementById(id).className='ps-dot ps-idle';
+  });
+
+  document.getElementById('welcome-screen').classList.remove('hidden');
+  document.getElementById('run-screen').classList.add('hidden');
+  document.getElementById('conv-screen').classList.add('hidden');
+}
+
+// ── Sliders ────────────────────────────────────────────────────────────────
+function bindSliders(){
+  document.getElementById('s-wall').oninput=function(){state.params.wall=parseFloat(this.value);document.getElementById('v-wall').textContent=parseFloat(this.value).toFixed(1)+' mm';updateGeo();};
+  document.getElementById('s-top').oninput=function(){state.params.top=parseFloat(this.value);document.getElementById('v-top').textContent=parseFloat(this.value).toFixed(1)+' mm';updateGeo();};
+  document.getElementById('s-cd').oninput=function(){state.params.cd=parseFloat(this.value);document.getElementById('v-cd').textContent=parseFloat(this.value).toFixed(1)+' mm';updateGeo();};
+  document.getElementById('s-nc').oninput=function(){state.params.nc=parseInt(this.value);document.getElementById('v-nc').textContent=parseInt(this.value);updateGeo();};
+  document.getElementById('s-htc').oninput=function(){state.params.htcIdx=parseInt(this.value);document.getElementById('v-htc').textContent=HTC_LBLS[parseInt(this.value)];};
+  document.getElementById('s-ht').oninput=function(){state.params.heater=parseInt(this.value);document.getElementById('v-ht').textContent=parseInt(this.value)+'°C';};
+  document.querySelectorAll('#mat-sel .mat-btn').forEach(function(btn){
+    btn.onclick=function(){
+      if(this.disabled) return;
+      document.querySelectorAll('#mat-sel .mat-btn').forEach(function(b){b.classList.remove('active');});
+      this.classList.add('active'); state.params.material=this.getAttribute('data-mat'); updateGeo();
+    };
+  });
+  document.getElementById('api-key').addEventListener('input',function(){
+    var v=this.value.trim();
+    document.getElementById('api-notice').style.display=(v&&v.length>10)?'none':'';
+  });
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+bindSliders();
+updateGeo();
+</script>
+</body>
+</html>
